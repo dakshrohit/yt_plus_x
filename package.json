@@ -1,0 +1,11 @@
+{
+  "name": "xcumyt",
+  "version": "1.0.0",
+  "description": "this a professional level project of x inbuilt in youtube type app.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Daksh",
+  "license": "ISC"
+}
