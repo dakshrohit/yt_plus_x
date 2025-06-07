@@ -21,7 +21,43 @@ dotenv.config({
 import connectdb from "./db/index.js";
 
 
-connectdb(); // this is the second approach to setup database connection, by creating a new file and writing the connection code there
+connectdb() // this is the second approach to setup database connection, by creating a new file and writing the connection code there
+.then(()=>{ // this will be executed if promise is recieved successfully
+
+     // always listen for errors before listening to the port i.e before app.listen
+    app.on("error",(error)=>{
+            console.error("ERRR: ",error);
+            throw error;
+            
+        })
+
+    app.listen(process.env.PORT || 8000 ,()=>{
+        console.log(`Server is running at port : ${process.env.PORT}.`);
+        
+    })
+
+})
+.catch((err)=>{ // executed if promise is not recieved successfully
+    console.log("MONGODB connection failed!!!",err);
+    
+}
+
+)
+
+
+/* whenever an asynchronous methods gets completed, a promise is returned always
+A Promise represents a value that may be available now, later, or never. It has three states:
+
+Pending (not yet resolved)
+
+Fulfilled (resolved successfully)
+
+Rejected (failed)
+
+.then() -> executes on success
+.catch()-> runs on failures
+
+*/
 
 
 
@@ -50,7 +86,7 @@ const app = express();
         // await: aits for the connection to be established before proceeding Must be used inside an async function
 
 
-
+       // always listen to errors before listening for port i.e before app.listen,
         app.on("error",(error)=>{
             console.error("ERRR: ",error);
             throw error;
