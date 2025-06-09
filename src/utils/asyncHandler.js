@@ -43,10 +43,11 @@ const asyncHandler = (fn)=> {
 /*           SECOND METHOD (USING PROMISE CONCEPT (i.e. .THEN().CATCH() OR .RESOLVE().CATCH()   )) */
 const asyncHandler =(fn)=>{
 
-    (req,res,next) => {
+    return (req,res,next) => {
         Promise.resolve(fn(req,res,next)).catch((err)=>next(err))
     }
     // simply means if the promise is resolved then execute fn with the parameters passed other wise run the catch func
+
 
 }
 
