@@ -10,8 +10,8 @@ app.use(cors({
     credentials:true
 }))
 
-app.use(express.json({limit:"20kb"})) // to make the app accept data in json format upto a limit 
-app.use(express.urlencoded({extended:true,limit:"20kb"})) // to accept data from the url, extended: to take nested objects  
+app.use(express.json({limit:"200kb"})) // to make the app accept data in json format upto a limit 
+app.use(express.urlencoded({extended:true,limit:"200kb"})) // to accept data from the url, extended: to take nested objects  
 app.use(express.static("public"))
 app.use(cookieParser( ))
 

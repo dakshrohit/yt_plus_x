@@ -48,15 +48,56 @@ const registeruser= asyncHandler(async (req,res)=>{
   // RETURN RESPONSE IF IT CAME OR SEND ERROR
 
 
-
-  // STEP1 
+ 
+  // console.log("req files: ",req.files); 
+  /*req files:  [Object: null prototype] {
+  avatar: [
+    {
+      fieldname: 'avatar',
+      originalname: 'Screenshot From 2025-06-06 10-20-15.png',
+      encoding: '7bit',
+      mimetype: 'image/png',
+      destination: './public/temp',
+      filename: 'Screenshot From 2025-06-06 10-20-15.png',
+      path: 'public/temp/Screenshot From 2025-06-06 10-20-15.png',
+      size: 4906
+    }
+  ],
+  coverimage: [
+    {
+      fieldname: 'coverimage',
+      originalname: 'Screenshot From 2025-03-18 22-33-46.png',
+      encoding: '7bit',
+      mimetype: 'image/png',
+      destination: './public/temp',
+      filename: 'Screenshot From 2025-03-18 22-33-46.png',
+      path: 'public/temp/Screenshot From 2025-03-18 22-33-46.png',
+      size: 28844
+    }
+  ]
+}
+*/
+   //                             STEP1 
 
  const {fullname,email,username,password} = req.body
  // we can get the data using req.body if it is sent to the server in form of json or from form data
  // to get files like photos,pdfs etc, we injected middleware mutler in the user router
-   console.log("email: ",email); 
+  //  console.log("email: ",email); 
+
+
+  // console.log("req.body:", req.body);
+  /* req.body: [Object: null prototype] {
+  fullname: 'dakshhh',
+  password: 'dakshrohittt',
+  username: 'mysticmaccc',
+  email: 'daksh@gmail.comm'
+} */
+
   
    // STEP 2
+// console.log("Incoming files: ", req.files); -> what files are to be uploaded on local server
+// console.log("Multer field: ", req.files?.avatar); // what files are uploaded succesfully in multer(disk space)
+
 
    if (fullname==="") {
     throw new ApiError(400,"fullname is required");
@@ -77,7 +118,7 @@ const registeruser= asyncHandler(async (req,res)=>{
    }
    
    // step 3
-   const existeduser= User.findOne({
+   const existeduser= await User.findOne({
     $or:[{ username },{ email }]
    }) // returns the first user present in the db whose either username or email matches with the provided details
    // so you cant add a user whose email  matches with some already present user data in the db
@@ -89,9 +130,16 @@ const registeruser= asyncHandler(async (req,res)=>{
     }
 
     //step 4 -> to check for files
-    const avatarlocalpath=req.files?.avatar[0]?.path
+    const avatarlocalpath=req.files?.avatar[0]?.path;
                 // since we have already declared to give us the filepath in mutler middleware, we can get the path (localpath) this way
-    const coverimahelocalpath=req.files?.coverimage[0]?.path;
+    // const coverimagelocalpath=req.files?.coverimage[0]?.path;  // this is giving errors because we have not set this to be required in data model, so when user doesnt gives it, it will show an error : TypeError: Cannot read properties of undefined (reading &#39;0&#39;)<br> &nbsp; &nbsp;at file:///home/dakshrohit/Documents/CODE/WEBDEV/node+express+nextjs/xcumyt/src/controllers/user.controller.js:135:52<br> &nbsp; &nbsp;at process.processTicksAndRejections (node:internal/process/task_queues:105:5)</pre>
+                                                                   // so we have to check first if it exists or not and should do this operation only if it exists
+    let coverimagelocalpath;
+    if(req.files && Array.isArray(req.files.coverimage) && req.files.coverimage.length>0){
+      // three conditions must be satisfied : req.files should exist, req.files.coverimage must be an array, the length of this coverimage array must be more than 0
+
+      coverimagelocalpath=req.files.coverimage[0].path;
+    }
     
     if(!avatarlocalpath){
       throw new ApiError(400,"Avatar file is required");
@@ -100,7 +148,7 @@ const registeruser= asyncHandler(async (req,res)=>{
     // step5 
 
     const avatar= await uploadoncloudinary(avatarlocalpath) // saves on cloudinary and gives back a response
-    const coverimage=await uploadoncloudinary(coverimahelocalpath)
+    const coverimage=await uploadoncloudinary(coverimagelocalpath)
     
            // check for avatar again
     if(!avatar){
@@ -111,10 +159,11 @@ const registeruser= asyncHandler(async (req,res)=>{
 
     const user= await User.create({
       fullname,
+      email,  // email:email , email both are same in modern javascript
       avatar: avatar.url, //already checked that it is existing 100% and is not empty
       coverimage:coverimage?.url || "", // dont know if it exists or not...so check if it exists and assign if it does otherwise assign an empty string 
       password,
-      username:username.toLowercase()
+      username:username.toLowerCase()
     })
 
 
@@ -169,3 +218,38 @@ const registeruser= asyncHandler(async (req,res)=>{
 
 
 export {registeruser};
+
+
+/* 
+                   // user value :
+
+{   
+    "statusCode": 200,
+    "data": {
+        "_id": "68487af96c31a00718391b97",
+        "username": "mysticmac",
+        "email": "daksh@gmail.com",
+        "fullname": "daksh",
+        "avatar": "http://res.cloudinary.com/dfghey3ef/image/upload/v1749580535/zc5pkow9bb0ms2ild4bs.png",
+        "coverimage": "http://res.cloudinary.com/dfghey3ef/image/upload/v1749580536/wasmma1leigrdlm15mrj.png",
+        "watchhistory": [],
+        "createdAt": "2025-06-10T18:35:37.810Z",
+        "updatedAt": "2025-06-10T18:35:37.810Z",
+        "__v": 0
+    },
+    "message": "User registered successfully",
+    "success": true
+} 
+
+    */
+// this is the message recieved once we send data via postman to database -> is nothing but user we created in step 6 
+// /home/dakshrohit/Pictures/Screenshots/Screenshot From 2025-06-11 00-06-48.png  -> image of how data is sent to test using postman
+
+// but why are we using cloudinary ?
+
+// so that we can give frontend the url of the files to show it 
+
+// how to get the frontend ?
+// look at the response we recieved in postman after sending data, there you could find urls of both avatar and coverimg and notice both of thier names are different even though we have set up those to be the same name which user uploads, that is because cloudinary does few things to it.
+// http://res.cloudinary.com/dfghey3ef/image/upload/v1749580535/zc5pkow9bb0ms2ild4bs.png for ex -> you can directly paste this on google to get the image and this url can be used to show on frontend
+// you can also look these things in db :  /home/dakshrohit/Pictures/Screenshots/Screenshot From 2025-06-11 00-18-14.png

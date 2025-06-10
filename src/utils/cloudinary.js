@@ -13,6 +13,22 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY, 
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
+//       HOW TO CHECK IF WE ARE CONNECTED TO CLOUDINARY SUCCESSFULLY OR NOT, IF NOT WHAT IS THE ERROR
+// cloudinary.api.ping((error, result) => {
+//   if (error) console.error("Cloudinary connection error:", error);
+//   else console.log("Cloudinary connected:", result);
+// });
+
+
+// should give something like this :
+//  MongoDB connected !! DB HOST: ac-8h36ujl-shard-00-01.i2ro8yu.mongodb.net
+// Server is running at port : 8000.
+// Cloudinary connected: {
+//   status: 'ok',
+//   rate_limit_allowed: 500,
+//   rate_limit_reset_at: 2025-06-10T15:00:00.000Z,
+//   rate_limit_remaining: 497
+// }
 
 const uploadoncloudinary = async (localfilepath)=>{
     try {
@@ -24,6 +40,7 @@ const uploadoncloudinary = async (localfilepath)=>{
         const response= await cloudinary.uploader.upload(localfilepath,{
             resource_type:"auto"
         })
+        
         //await pauses execution until the Promise settles, then:
         // Returns the resolved value if the Promise fulfills
         // Throws the rejection reason if the Promise rejects
@@ -44,7 +61,8 @@ const uploadoncloudinary = async (localfilepath)=>{
 // }
 
         // file uploaded successfully
-        console.log("FILE IS UPLOADED SUCCESSFULLY ON CLOUDINARY !",response.url);
+        // console.log("FILE IS UPLOADED SUCCESSFULLY ON CLOUDINARY !",response.url); //commenting after we have tested via postman that files are getting uploaded in cloudinary
+        fs.unlinkSync(localfilepath) // unlinking the files once successfully uploaded from localserver  in cloudinary 
         return response;
         
 
