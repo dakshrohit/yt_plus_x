@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import { Schema } from "mongoose";
 import jwt from "jsonwebtoken"
 import bcrypt from "bcrypt"
-import { use } from "react";
 
 const userschema= new Schema({
     username:{
@@ -69,7 +68,7 @@ userschema.pre("save",async function (next) {
     if(!this.isModified("password")) 
         {return next();}
 
-    this.password = bcrypt.hash(this.password,10)
+    this.password = await bcrypt.hash(this.password,10)
     next()
     /* Purpose: Checks if the password field was modified
 
@@ -155,4 +154,4 @@ userschema.methods.generateRefreshToken=function(){
 userschema.methods.generateRefreshToken=function(){
     
 }
-export const User=mongoose.model("User",userschema)
+export const User = mongoose.model("User",userschema)

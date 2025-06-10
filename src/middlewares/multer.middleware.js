@@ -1,4 +1,4 @@
-import multer from multer;
+import multer from "multer";
 const storage = multer.diskStorage({ 
     //You are creating a custom disk storage engine for multer. This tells multer how to store uploaded files on the disk (rather than memory or a remote location).
 
@@ -19,7 +19,7 @@ const storage = multer.diskStorage({
     cb(null,file.originalname)
 
   }
-})anki
+})
 
 export const upload = multer({storage})
 

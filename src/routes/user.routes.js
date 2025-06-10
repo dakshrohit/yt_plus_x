@@ -1,9 +1,33 @@
 import { Router } from "express";
 import { registeruser } from "../controllers/user.controller.js";
+import {upload} from "../middlewares/multer.middleware.js"
 
 const router =Router()
 
-router.route("/register").post(registeruser)
+router.route("/register").post(
+    // injecting middleware: mutler (here)
+    //When using multer.fields(), each field config object typically only supports these main properties: name and maxCount
+
+    upload.fields(
+        //Tells multer to expect a multi-field file upload:
+
+
+        [
+        {
+            name:"avatar",
+            maxCount:1
+            
+        },
+        {
+            name:"coverimage",
+            maxCount:1
+
+        } // / One file with field name "avatar" (max 1 file)
+         // One file with field name "coverimage" (max 1 file)
+
+    ]),
+    registeruser
+)
 
 
 export default router;
