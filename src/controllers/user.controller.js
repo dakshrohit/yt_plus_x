@@ -3,6 +3,38 @@ import {ApiError} from '../utils/ApiError.js'
 import {User} from "../models/user.models.js"
 import {uploadoncloudinary} from "../utils/cloudinary.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
+
+const generateaccessandrefreshtokens = async(userid)=>{
+  try {
+   const user=  await User.findById(userid); // finds user on the basis of userid
+   const accesstoken=user.generateAccessToken();
+   const refreshtoken=user.generateRefreshToken();
+   // so now we have both tokens and both have to be  given to the user
+   // also refreshtoken is saved in our db, so that we dont have to ask password multiple times from the user
+
+   user.refreshtokens=refreshtoken; // saved refreshtoken in db (see in user.model, we have a field of refreshtokens)
+  //  user.save(); // whenever you save, all the things of user.model kicks in, for ex password,which is a required in our field,and here we have only set one field of refresh token, it would give an error.
+  // we willbe specifying -> dont do validation, just save
+  await user.save(
+    {validateBeforeSave:false}
+  ) 
+  //  giving back both tokens
+
+  return {accesstoken,refreshtoken}
+
+
+    
+  } catch (error) {
+    console.error("Error during token generation:",error);
+    throw new ApiError(500,"something went wrong while generating refresh and access tokens")
+ 
+    
+    
+  }
+
+
+  // so now we have a method to do all the things written above
+}
 // asyncHandler(...)
 // This is a middleware wrapper commonly used in Express apps — especially when dealing with async/await.
 /*  Without asyncHandler, you’d have to write:
@@ -170,7 +202,7 @@ const registeruser= asyncHandler(async (req,res)=>{
      // step 7
   
     const createduser = await User.findById(user._id).select(
-      "-password -refreshtoken"
+      "-password -refreshtokens"
     )
 
           /* await User.findById(user._id)
@@ -210,16 +242,6 @@ const registeruser= asyncHandler(async (req,res)=>{
 
 })
 
-
-
-
-
-
-
-
-export {registeruser};
-
-
 /* 
                    // user value :
 
@@ -253,3 +275,152 @@ export {registeruser};
 // look at the response we recieved in postman after sending data, there you could find urls of both avatar and coverimg and notice both of thier names are different even though we have set up those to be the same name which user uploads, that is because cloudinary does few things to it.
 // http://res.cloudinary.com/dfghey3ef/image/upload/v1749580535/zc5pkow9bb0ms2ild4bs.png for ex -> you can directly paste this on google to get the image and this url can be used to show on frontend
 // you can also look these things in db :  /home/dakshrohit/Pictures/Screenshots/Screenshot From 2025-06-11 00-18-14.png
+
+const loginuser=asyncHandler(async(req,res)=>{
+
+  // steps
+
+   // bring data from req.body
+   // check username or email is there or not
+   // find the user, if its not there, return an error
+   // if there is a user, password check
+   // if password matches, genrate both types of tokens 
+   // and send these tokens to the user in form of cookies (secure cookies)
+
+
+   //step 1
+
+   const {email,username,password} =req.body;
+
+   
+   // step 2
+   if(!username  && !email) {
+    throw new ApiError(400,"Username or email is required")
+   } // we need both email and password
+
+  //  alteranate of the above code
+  // if(!(username  || email)){
+  //   throw new ApiError(400,"Username or email is required")
+  //  } // we need any one
+
+   // step3
+
+   const user=await User.findOne({
+    $or: [{username},{email}]
+    // this operator will find the first matching user either acc to the username or email
+   })
+
+
+   if(!user){
+    throw new ApiError(404,"User does not exist")
+   }
+
+   //step 4
+  const ispasswordvalid= await user.isPasswordCorrect(password);
+  if(!ispasswordvalid){
+    throw new ApiError(401,"Invalid user credentials")
+  }
+
+  //step 5  -> generating both tokens-> this we have to multiple times, so we will generated function to do the same. the func is written above
+    
+  // using the method we created:
+  const {accesstoken,refreshtoken} = await generateaccessandrefreshtokens(user._id); // this method returns both tokens, so we stored them in two variables
+  
+
+  // step 6 -> to send these tokens in form of cookies
+
+    // here to update the tokens/ send the tokens, we can either update the user object we got using findone() or can call another database query
+
+    const loggedinuser = await User.findById(user._id).select("-password -refreshtokens"); // ran another query in db to get user object which will have all fields except password and refreshtoken
+    
+    const options ={
+      httpOnly:true,
+      secure:true
+    } 
+
+    //by default, anybody can modify these cookies, be it frontend or backend
+    // but after writing the above line, we can only modify cookies by backend or thr server
+    
+
+    return res.status(200)
+    .cookie("accesstoken",accesstoken,options)
+    .cookie("refreshtoken",refreshtoken,options)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user :loggedinuser,accesstoken,refreshtoken
+        }, // sending both tokens explicitly to the user (even though we have set them already in cookies)
+        "User logged in successfully !"
+      )
+    )
+
+
+
+
+
+})
+
+const logoutuser= asyncHandler(async(req,res)=>{
+
+         //steps
+           // clear the cookies
+           // also reset the cookies which are there in the user.model.js schema and we did set them using generateaccessandrefershtoken method
+
+           
+               // deleting refresh tokens from the db 
+           await User.findByIdAndUpdate(
+            req.user._id,
+            {
+              $unset:{
+                refreshtokens:1
+              },
+             
+            },
+             {
+                new:true
+              }
+           )
+
+         const options ={
+      httpOnly:true,
+      secure:true
+    } 
+
+    return res.status(200)
+    .cookie("accesstoken",options)
+    .cookie("refreshtoken",options)
+    .json(
+      new ApiResponse(
+        200,
+        {}, 
+        "User logged out !"
+      )
+    )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+})
+
+
+
+
+
+// why middleware auth.midd.js got created? -> to get to know if the user is authenticated or not
+// as it is required for other areas as well so we created a new middleware which could be used wherever it is needed
+
+
+export {registeruser,loginuser,logoutuser};
