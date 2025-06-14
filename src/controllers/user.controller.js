@@ -3,6 +3,7 @@ import {ApiError} from '../utils/ApiError.js'
 import {User} from "../models/user.models.js"
 import {uploadoncloudinary} from "../utils/cloudinary.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
+import jwt from "jsonwebtoken"
 
 const generateaccessandrefreshtokens = async(userid)=>{
   try {
@@ -11,7 +12,7 @@ const generateaccessandrefreshtokens = async(userid)=>{
    const refreshtoken=user.generateRefreshToken();
    // so now we have both tokens and both have to be  given to the user
    // also refreshtoken is saved in our db, so that we dont have to ask password multiple times from the user
-
+       // remember this tokens are encoded as we generated them using jwt in user.model.js
    user.refreshtokens=refreshtoken; // saved refreshtoken in db (see in user.model, we have a field of refreshtokens)
   //  user.save(); // whenever you save, all the things of user.model kicks in, for ex password,which is a required in our field,and here we have only set one field of refresh token, it would give an error.
   // we willbe specifying -> dont do validation, just save
@@ -32,6 +33,15 @@ const generateaccessandrefreshtokens = async(userid)=>{
     
   }
 
+  /*  why we created generaterefreshandaccesstoken() func then as we already have both generateaccesstoken(),generaterefreshtoken() in the user.model.js?
+  
+  
+  
+  Separation of Concerns:
+Component	Responsibility:
+Schema Methods (user.generateXToken())	How to generate tokens (JWT signing logic)
+Controller Function (generateaccessandrefreshtokens())	When to generate tokens + token management (DB save, error handling) */
+
 
   // so now we have a method to do all the things written above
 }
@@ -44,7 +54,16 @@ app.post('/register', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-}); */
+}); 
+Schema: "Here's how to make tokens for a user."
+
+Controller: "Here's when to make tokens and what to do with them." 
+
+
+
+
+
+*/
 
 // method to register user
 const registeruser= asyncHandler(async (req,res)=>{
@@ -455,21 +474,94 @@ const logoutuser= asyncHandler(async(req,res)=>{
 })
 
 
+const refreshAccessToken= asyncHandler(async(req,res)=>{
+  // steps
+
+  // get the refreshtoken from the cookies
+  const incomingrefreshtoken=req.cookies?.refreshtoken || req.body;
+  if(!incomingrefreshtoken){
+    throw new ApiError(401,"Unauthorised request!")
+  }// this token is encoded.
+
+  // verify the token recieved using jwt
+    // check the token recieved has matching REFRESH_TOKEN_SECRET or not 
+  try {
+    const decodedtoken=jwt.verify(
+      incomingrefreshtoken,
+      process.env.REFRESH_TOKEN_SECRET
+    ) // decoded token
+    const user=await User.findById(decodedtoken?._id);
+    // we got the data from the request from the token which we decoded
+   if(!user){
+      throw new ApiError(401,"Invalid refresh token!")
+    }
+    
+  
+    // check: matching the two tokens: incomingrefreshtoken(which we got from the user cookies and decoded it using jwt) and user which we got here, also has "refreshtokens" field and both should be same
+    if(incomingrefreshtoken !== user?.refreshtokens){
+      ApiError(401,"Refresh token is invalid or used!")
+    }
+  
+    // generate new tokens
+  
+    const options={
+      httpOnly:true,
+      secure:true
+    }
+  
+   const {accesstoken,newrefreshtoken} =await generateaccessandrefreshtokens(user._id);
+  
+    return res.status(200)
+    .cookie("accesstoken",accesstoken,options)
+    .cookie("refreshtoken",newrefreshtoken,options)
+    .json(
+      new ApiResponse(
+        200,
+        {accesstoken,refreshtoken:newrefreshtoken}, // why we did key:value only for refreshtoken? bcs:  { accesstoken, refreshtoken }, // Same as { accesstoken: accesstoken, refreshtoken: refreshtoken }.. Explicit (key: value) → Better if variable names differ from response keys.
+        "Access token refreshed!"
+  
+      )
+    )
+  } catch (error) {
+    throw new ApiError(401,error?.message || 
+      "Invalid refresh token!"
+    )
+    
+  } // doesnt has to use the exact same property name (refreshtokens) in the .json() response as what you used in your user model.
+  // it is just a response for the frontend
+  // just the frontend should know which property name to expect in the response
 
 
+ 
+})
 
 // why middleware auth.midd.js got created? -> to get to know if the user is authenticated or not
 // as it is required for other areas as well so we created a new middleware which could be used wherever it is needed
 
 
-export {registeruser,loginuser,logoutuser};
+export {registeruser,loginuser,logoutuser,refreshAccessToken};
 
 
 
+//         ABT TOKENS
 
+/* encoded token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30 */
 
+/* decoded token: 
+            Decoded Header
+            {
+  "alg": "HS256",
+  "typ": "JWT"
+}
 
+Decoded Payload: {
+  "sub": "1234567890",
+  "name": "John Doe",
+  "admin": true,
+  "iat": 1516239022
+}
 
+ */
 
 
 

@@ -8,11 +8,16 @@ import { User } from "../models/user.models.js";
 export const verifyJWT=asyncHandler(async(req,_,next)=>{
     // if we are not using res, so replece it by "_"
     try {
+        // take the tokens from the cookies we got.
         const token = req.cookies?.accesstoken || req.header("Authorization")?.replace("Bearer","")
         if(!token){
             throw ApiError(401,"Unauthorized request")
         }
-        const decodedtoken = jwt.verify(token,process.env.ACCESS_TOKEN_SECRET)
+        
+        const decodedtoken = jwt.verify(token,process.env.ACCESS_TOKEN_SECRET) // the token which user recieves and the token which is stored in the db are both diff bcs the user gets encrypted version and the db has raw tokens
+        
+        // // /home/dakshrohit/Pictures/Screenshots/Screenshot From 2025-06-14 23-25-52.png
+
         /* When you decode a JWT (JSON Web Token) using jwt.verify(), the decodedToken contains the payload that was originally embedded in the token during its creation (usually during login).  */
 /*{
   _id: "65a1b2c3d4e5f6g7h8i9j0k",  // User's MongoDB _id

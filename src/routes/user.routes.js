@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { loginuser, logoutuser, registeruser } from "../controllers/user.controller.js";
+import { loginuser, logoutuser, registeruser, refreshAccessToken} from "../controllers/user.controller.js";
 import {upload} from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 const router =Router()
@@ -33,5 +33,5 @@ router.route("/login").post(loginuser)
 
 // secures routes
 router.route("/logout").post(verifyJWT,logoutuser); // verifyjwt is a middleware which will run first and it has next in it, so after that logoutuser will run
-
+router.route("/refresh-token").post(refreshAccessToken)
 export default router;
